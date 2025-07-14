@@ -1,3 +1,4 @@
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -103,7 +104,7 @@ public final class TFTPUtils {
         }
     }
 
-    public static void sendACK(DatagramSocket ds, short blockNo, String ip, int destPort) throws IOException {
+    public static void sendACK(DatagramSocket ds, short blockNo, String ip, int destPort){
         ByteBuffer bb = ByteBuffer.allocate(4);
         bb.putShort((short) 4);//op code for ACK
         bb.putShort((short) blockNo);//Block number of 0 to indicate transfer can be started
@@ -115,7 +116,7 @@ public final class TFTPUtils {
         }
     }
 
-    public static void sendError(DatagramSocket ds, int errorCode, String ip, int destPort) throws IOException{
+    public static void sendError(DatagramSocket ds, int errorCode, String ip, int destPort) {
 
         ByteBuffer bb = ByteBuffer.allocate(5 + getError(errorCode).length());
         bb.putShort((short) 5);//op code indicating error
@@ -141,7 +142,7 @@ public final class TFTPUtils {
     }
 
     public static int sendData(DatagramSocket ds,byte[] b,short blockNo,String ip, int destPort){
-        ByteBuffer bb = ByteBuffer.allocate(516);
+        ByteBuffer bb = ByteBuffer.allocate(b.length+4);
         bb.putShort((short)3);
         bb.putShort(blockNo);
         bb.put(b);
@@ -153,6 +154,12 @@ public final class TFTPUtils {
             logger.log(Level.WARNING,"Failed to send data packet!");
             return -1;
         }
+    }
+
+    public static void closeResources(Closeable fileStream, DatagramSocket ds, String message) throws IOException {
+        fileStream.close();
+        ds.close();
+        logger.log(Level.WARNING,message);
     }
 
 }

@@ -28,7 +28,7 @@ public class WriteDataHandler implements Runnable{
 
     private WriteDataHandler(){}
 
-    WriteDataHandler(byte [] data, int destPort, String ip, int sessionPort, List<Integer> portList){
+   public WriteDataHandler(byte [] data, int destPort, String ip, int sessionPort, List<Integer> portList){
         this.data=data;
         this.destPort = destPort;
         this.ip = ip;
