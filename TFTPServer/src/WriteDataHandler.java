@@ -233,16 +233,6 @@ public class WriteDataHandler implements Runnable{
             } catch (IOException ex) {
                 logger.log(Level.WARNING, "Failed to send error message to client!" + ip);
             }
-            //for each packet update session data with block number
-            while(running){
-                byte [] buffer = new byte [516];
-                try {
-                    ds.receive(dp);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-
         }
 
         private void sendError(DatagramSocket ds, int errorCode) throws IOException{

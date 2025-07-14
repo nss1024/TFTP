@@ -24,6 +24,7 @@ public class Server {
     private int portRangeFrom=0;
     private int portRangeTo = 0;
     private List<Integer> portList = new ArrayList<Integer>();
+    int sessionPort=0;
 
     Server(int port, int portRangeFrom, int portRangeTo){
         this.port=port;
@@ -78,10 +79,12 @@ public class Server {
                 switch(getOpCode(data)) {
                     case 1://read request RRQ
 
+                        sessionPort = getthreadPortNumber();
+                        executor.submit(new ReadHandler(data,dpPort,dpIpAddress,sessionPort,portList));
                         break;
                     case 2://write request WRQ
 
-                        int sessionPort = getthreadPortNumber();
+                        sessionPort = getthreadPortNumber();
                         executor.submit(new WriteDataHandler(data,dpPort,dpIpAddress,sessionPort,portList));
                         break;
                     default://send error code, received a malformed packet with unknown error code
