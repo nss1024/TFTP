@@ -123,7 +123,7 @@
             bb.putShort((short) 5);//op code indicating error
             bb.putShort((short) errorCode);//Specific error code
             bb.put(errorMsgBytes);//error message
-            bb.put((byte) 0);//"0" terminator
+            bb.put((byte) 0);//"0" terminator.
 
             try {
                 ds.send(new DatagramPacket(bb.array(), bb.position(), InetAddress.getByName(ip), destPort));
