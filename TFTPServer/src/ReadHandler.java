@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
@@ -19,17 +18,14 @@ public class ReadHandler implements Runnable{
     int destPort = 0;
     int localPort = 8888;
     DatagramSocket ds = null;
-    DatagramPacket dp = null;
     short blockNo=1;
-    boolean running = true;
-    boolean retry=true;
     final String PATH = "c:/dev/FileStore/";
     Logger logger = Logger.getGlobal();
-    int retransmitCounter=0;
-    int maxAttempts=3;//TODO make max attempts configurable
-    int oldACKCounter=0;
-    final int ackTolerance = 5; //TODO make ackTolerance configurable
-    List<byte[]> dataBuffer = new ArrayList<byte[]>();
+    private final int MAX_ATTEMPTS=3;
+    private final int TIMEOUT_DURATION=1000;
+    private static final int DATA_BLOCK_SIZE = 512;
+
+
 
     private ReadHandler(){}
 
@@ -44,85 +40,95 @@ public class ReadHandler implements Runnable{
     @Override
     public void run() {
         //get file name
-        FileInputStream fis=null;
-        ds=TFTPUtils.getDatagramSocket(localPort);
+        ds=TFTPUtils.getDatagramSocket(localPort,TIMEOUT_DURATION);
         String fileName = TFTPUtils.getText(data,2,0);
         String mode = TFTPUtils.getText(data,2,1);
-
-        try {
-            fis = new FileInputStream(new File(PATH+fileName));
-        } catch (FileNotFoundException e) {
-            logger.log(Level.SEVERE,"Failed to open file!");
-                TFTPUtils.sendError(ds,1,ip,destPort);
-            throw new RuntimeException(e);
+        if(!TFTPUtils.isFileNameValid(fileName)) {
+            logger.log(Level.SEVERE,"Received invalid file name!");
+            TFTPUtils.sendError(ds,0,"Invalid filename received:"+fileName,ip,destPort);
+            TFTPUtils.closeResources(ds);
+            portList.remove(Integer.valueOf(localPort));
+            return;
         }
-        byte [] fileData = new byte[512];
-        byte [] inboundBuffer = new byte[1024];
-        byte [] inboundData = null;
-        int len=0;
-        dp=new DatagramPacket(inboundBuffer,inboundBuffer.length);
-        while(running){
-            try {
-                if ((len=fis.read(fileData))==-1) running = false;
-                TFTPUtils.sendData(ds,Arrays.copyOf(fileData,len),blockNo,ip,destPort);
-                ds.setSoTimeout(1000);//set a 1-second timeout on the read
-                retry=true;
-                do {
-                    try {
-                        ds.receive(dp);
-                        inboundData = Arrays.copyOf(dp.getData(), dp.getLength());
-                        if (TFTPUtils.getShort(inboundData, 0) == (short) 4) {
-                            //check block number
-                            int responseBlockNo = TFTPUtils.getShort(inboundData, 2);
-                            if (responseBlockNo != blockNo) {
-                                if (responseBlockNo > blockNo) {//something went wrong here, close the connection
-                                    try {
-                                        TFTPUtils.closeResources(fis, ds, "Received block number greater than las number sent! " + responseBlockNo);
-                                    } catch (IOException e) {
-                                        logger.log(Level.WARNING, "Failed to close resource!");
-                                    }
-                                    throw new RuntimeException();//stop execution
-                                }
-                                if (responseBlockNo < blockNo) {
-                                    logger.log(Level.WARNING, "Received ACK old message, network may be slow! If this continues, transmission will be terminated!");
-                                    oldACKCounter++;
-                                    TFTPUtils.sendData(ds,Arrays.copyOf(fileData,len),blockNo,ip,destPort);//try and send data again
-                                    if (oldACKCounter == ackTolerance) {
-                                        try {
-                                            TFTPUtils.closeResources(fis, ds, "Received ACK for old message " + oldACKCounter + " times, terminating operation!");
-                                        } catch (IOException e) {
-                                            logger.log(Level.WARNING, "Failed to close resource!");
-                                        }
-                                        throw new RuntimeException();//stop execution
-                                    }
-
-                                }
-                            }else{blockNo++;retry=false;}
-
-                        }
-                        if (TFTPUtils.getShort(inboundData, 0) != (short) 4) {
-                            //If response is not 04-ACK it means either an error or an illegal TFTP operation, in each case, stop transfer
-                            try {
-                                TFTPUtils.closeResources(fis, ds, "Received error or illegal op code from the client, transfer cancelled!");
-                            } catch (IOException e) {
-                                logger.log(Level.WARNING, "Failed to close resource!");
-                            }
-                            throw new RuntimeException();//stop execution
-
-                        }
-                    } catch (SocketTimeoutException e) {
-                        //handle re-transmission on timeout
-                        retransmitCounter++;
-                        if(retransmitCounter==maxAttempts){retry=false;}
-                    }
-                }while(retry);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-        }
-
+        sendFile(PATH, fileName, ds, blockNo, ip, destPort);
+        TFTPUtils.closeResources(ds);
         portList.remove(Integer.valueOf(localPort));
 
     }
+
+    private void sendFile(String path,String fileName, DatagramSocket ds,short blockNo,String ip, int destPort){
+        byte[] fileData = new byte[DATA_BLOCK_SIZE];
+        int bytes;
+        int counter=0;
+        File f = new File(path+fileName);
+        try(FileInputStream fis=new FileInputStream(f)){
+        while((bytes=fis.read(fileData)) > -1){
+                    if(sendData(ds,Arrays.copyOf(fileData,bytes),blockNo,ip,destPort)){
+                        blockNo=(short)((blockNo+1)&0XFFFF);
+                        counter++;
+                    }else{
+                        logger.log(Level.SEVERE,"Failed to send data block to "+ip+":"+destPort);
+                        TFTPUtils.sendError(ds,0,"Failed to transmit file!"+fileName,ip,destPort);
+                        return;
+                    }
+        }
+        logger.log(Level.INFO,"File transmitted successfully."+counter+"blocks were sent to "+ip+":"+destPort);
+
+
+        }catch(FileNotFoundException fe){
+            logger.log(Level.SEVERE,"Error opening file "+fileName);
+            TFTPUtils.sendError(ds,0, "File not found: " + fileName, ip, destPort);
+
+        }catch(IOException e){
+            logger.log(Level.SEVERE,"Error sending file to client \nFile name:"+
+            fileName+"\n destination: "+ip+":"+destPort);
+
+        }
+    }
+
+    private boolean sendData(DatagramSocket ds, byte[] dataToSend,short blockNo,String ip,int destPort){
+
+        int retries = 0;
+        byte[] reply;
+        while (true){
+            TFTPUtils.sendData(ds,dataToSend,blockNo,ip,destPort);
+            reply=waitForReply(ds);
+            if(reply!=null&&evaluateReply(reply,blockNo)){return true;}
+            if(retries==MAX_ATTEMPTS){
+                logger.log(Level.WARNING, "Max retries reached for block " + blockNo);
+                return false;
+            }
+            else{retries++;}
+        }
+    }
+
+    private byte[] waitForReply(DatagramSocket ds){
+        byte [] inboundBuffer = new byte[1024];
+        DatagramPacket dp=new DatagramPacket(inboundBuffer,inboundBuffer.length);
+        try {
+            ds.receive(dp);
+            return Arrays.copyOf(dp.getData(),dp.getLength());
+        }catch(SocketTimeoutException t){
+            logger.log(Level.WARNING,"Client response timed out!");
+            return null;
+        }catch (IOException e) {
+            logger.log(Level.SEVERE,"Failed to receive inbound data packet!");
+            return null;
+        }
+    }
+
+    private boolean evaluateReply(byte[] b,short blockNo){
+        if(TFTPUtils.isAck(b)){
+            return TFTPUtils.isValidAck(b,blockNo);
+        }else if(TFTPUtils.isError(b)){
+            logger.log(Level.SEVERE,"Client Error received"+TFTPUtils.getShort(b,2)+" - "
+                    +TFTPUtils.getError(TFTPUtils.getShort(b,2)));
+            return false;
+        } else{
+            logger.log(Level.SEVERE,"Unsupported OP code returned!"+TFTPUtils.getOpCode(b));
+            return false;
+        }
+    }
+
 }
+

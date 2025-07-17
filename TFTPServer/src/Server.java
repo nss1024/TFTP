@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -23,7 +24,7 @@ public class Server {
     private boolean running = true;
     private int portRangeFrom=0;
     private int portRangeTo = 0;
-    private List<Integer> portList = new ArrayList<Integer>();
+    private List<Integer> portList = new CopyOnWriteArrayList<>();
     int sessionPort=0;
 
     Server(int port, int portRangeFrom, int portRangeTo){
