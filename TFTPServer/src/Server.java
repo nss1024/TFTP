@@ -9,9 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,6 +19,8 @@ public class Server {
     private final int threads = Runtime.getRuntime().availableProcessors()>1?Runtime.getRuntime().availableProcessors()/2:1;
     private DatagramSocket ds = null;
     private ExecutorService executor = null;
+    private ThreadPoolExecutor threadPoolExecutor = null;
+    BlockingQueue<Runnable> workQueue=new LinkedBlockingQueue();
     private boolean running = true;
     private int portRangeFrom=0;
     private int portRangeTo = 0;
@@ -44,9 +44,9 @@ public class Server {
         logger.log(Level.INFO,"Server started");
     }
 
-    private void startExecutorService(){
-        executor = Executors.newFixedThreadPool(threads);
-        logger.log(Level.INFO,"Executor started!");
+    private void startExecutorPool(int threads){
+        threadPoolExecutor=new ThreadPoolExecutor(2,threads,60L, TimeUnit.SECONDS,workQueue);
+        logger.log(Level.INFO,"Thread pool executor started!");
     }
 
     private void stopExecutorService(){executor.shutdown();}
@@ -65,7 +65,7 @@ public class Server {
 
     public void startServer(){
         createServer();
-        startExecutorService();
+        startExecutorPool(threads);
         logger.log(Level.INFO,"Server listening on port "+port);
         byte [] buffer = new byte [2048];
         int dpPort = 0;
@@ -81,12 +81,12 @@ public class Server {
                     case 1://read request RRQ
 
                         sessionPort = getthreadPortNumber();
-                        executor.submit(new ReadHandler(data,dpPort,dpIpAddress,sessionPort,portList));
+                        threadPoolExecutor.submit(new ReadHandler(data,dpPort,dpIpAddress,sessionPort,portList));
                         break;
                     case 2://write request WRQ
 
                         sessionPort = getthreadPortNumber();
-                        executor.submit(new WriteDataHandler(data,dpPort,dpIpAddress,sessionPort,portList));
+                        threadPoolExecutor.submit(new WriteDataHandler(data,dpPort,dpIpAddress,sessionPort,portList));
                         break;
                     default://send error code, received a malformed packet with unknown error code
                         break;

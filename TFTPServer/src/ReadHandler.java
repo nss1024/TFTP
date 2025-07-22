@@ -43,6 +43,10 @@ public class ReadHandler implements Runnable{
         ds=TFTPUtils.getDatagramSocket(localPort,TIMEOUT_DURATION);
         String fileName = TFTPUtils.getText(data,2,0);
         String mode = TFTPUtils.getText(data,2,1);
+        if (mode.equalsIgnoreCase("mail")) {
+            TFTPUtils.sendError(ds, 0, "Unsupported transfer mode: mail", ip, destPort);
+            return;
+        }
         if(!TFTPUtils.isFileNameValid(fileName)) {
             logger.log(Level.SEVERE,"Received invalid file name!");
             TFTPUtils.sendError(ds,0,"Invalid filename received:"+fileName,ip,destPort);
@@ -50,30 +54,50 @@ public class ReadHandler implements Runnable{
             portList.remove(Integer.valueOf(localPort));
             return;
         }
-        sendFile(PATH, fileName, ds, blockNo, ip, destPort);
+        sendFile(PATH, fileName, ds, blockNo, ip, destPort,mode);
         TFTPUtils.closeResources(ds);
         portList.remove(Integer.valueOf(localPort));
 
     }
 
-    private void sendFile(String path,String fileName, DatagramSocket ds,short blockNo,String ip, int destPort){
+    private void sendFile(String path,String fileName, DatagramSocket ds,short blockNo,String ip, int destPort, String mode){
         byte[] fileData = new byte[DATA_BLOCK_SIZE];
         int bytes;
         int counter=0;
         File f = new File(path+fileName);
-        try(FileInputStream fis=new FileInputStream(f)){
-        while((bytes=fis.read(fileData)) > -1){
-                    if(sendData(ds,Arrays.copyOf(fileData,bytes),blockNo,ip,destPort)){
-                        blockNo=(short)((blockNo+1)&0XFFFF);
+        try(FileInputStream fis=new FileInputStream(f)) {
+            if (mode.equalsIgnoreCase("netascii")) {
+                byte[] result = null;
+                while (true) {
+                    result = TFTPUtils.checkBytesNetASCII(fis);
+                    if (sendData(ds, result, blockNo, ip, destPort)) {
+                        blockNo = TFTPUtils.incrementBlock(blockNo);
                         counter++;
-                    }else{
-                        logger.log(Level.SEVERE,"Failed to send data block to "+ip+":"+destPort);
-                        TFTPUtils.sendError(ds,0,"Failed to transmit file!"+fileName,ip,destPort);
+                    } else {
+                        logger.log(Level.SEVERE, "Failed to send data block to " + ip + ":" + destPort);
+                        TFTPUtils.sendError(ds, 0, "Failed to transmit file!" + fileName, ip, destPort);
                         return;
                     }
-        }
-        logger.log(Level.INFO,"File transmitted successfully."+counter+"blocks were sent to "+ip+":"+destPort);
+                    if (result.length == 0) {
+                        break;
+                    }
+                }
+                logger.log(Level.INFO, "File transmitted successfully." + counter + "blocks were sent to " + ip + ":" + destPort);
 
+            }
+        if(mode.equalsIgnoreCase("octet")){
+            while ((bytes = fis.read(fileData)) > -1) {
+                if (sendData(ds, Arrays.copyOf(fileData, bytes), blockNo, ip, destPort)) {
+                    blockNo = TFTPUtils.incrementBlock(blockNo);
+                    counter++;
+                } else {
+                    logger.log(Level.SEVERE, "Failed to send data block to " + ip + ":" + destPort);
+                    TFTPUtils.sendError(ds, 0, "Failed to transmit file!" + fileName, ip, destPort);
+                    return;
+                }
+            }
+            logger.log(Level.INFO, "File transmitted successfully." + counter + "blocks were sent to " + ip + ":" + destPort);
+        }
 
         }catch(FileNotFoundException fe){
             logger.log(Level.SEVERE,"Error opening file "+fileName);

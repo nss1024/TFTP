@@ -1,6 +1,8 @@
     import javax.xml.crypto.Data;
+    import java.io.ByteArrayOutputStream;
     import java.io.Closeable;
     import java.io.IOException;
+    import java.io.InputStream;
     import java.net.*;
     import java.nio.ByteBuffer;
     import java.nio.charset.StandardCharsets;
@@ -173,6 +175,10 @@
             return getShort(b,0)==(short)4 && getBlockNo(b)==blockNo;
         }
 
+        public static short incrementBlock(short blockNo) {
+            return (short)((blockNo + 1) & 0xFFFF);
+        }
+
         public static byte[] createDataPacket(short blockNumber,byte[] data){
             ByteBuffer bb = ByteBuffer.allocate(data.length+4);
             bb.putShort((short)3);
@@ -194,5 +200,50 @@
             if (fn.contains("..") || fn.contains("/") || fn.contains("\\")) return false;
             return true;
         }
+
+        public static boolean isCarriageReturn(byte b) {
+            return b == '\r';
+        }
+
+        public static boolean isLineFeed(byte b) {
+            return b == '\n';
+        }
+
+        public static byte[] checkBytesNetASCII(InputStream s) throws IOException {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream(512);
+
+            boolean crDetected = false;
+            int byteIn;
+
+            while (buffer.size() < 512 && (byteIn = s.read()) != -1) {
+                if (isCarriageReturn((byte)byteIn)) {
+                    crDetected = true;
+                    continue;
+                }
+
+                if (crDetected) {
+                    if (isLineFeed((byte)byteIn)) {
+                        buffer.write('\r');
+                        buffer.write('\n');
+                    } else {
+                        buffer.write('\r');
+                        buffer.write('\0');
+                        buffer.write(byteIn);
+                    }
+                    crDetected = false;
+                } else {
+                    buffer.write(byteIn);
+                }
+            }
+
+            // Handle case where stream ends after a \r
+            if (crDetected) {
+                buffer.write('\r');
+                buffer.write('\0');
+            }
+
+            return buffer.toByteArray();
+        }
+
 
     }
