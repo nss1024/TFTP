@@ -60,13 +60,13 @@ public class WriteDataHandler implements Runnable{
             throw new RuntimeException();
         }
 
-        //check mode; Supported mode = octet
+        //check mode; Supported mode = octet, NetAscii
         try {
             mode = getText(data, 2, 1);//get mode from datagram packet
-            if (!mode.equalsIgnoreCase("octet")) {
+            if (!mode.equalsIgnoreCase("mail")) {
                 try {
                     sendError(ds, 0);
-                    logger.log(Level.WARNING, "Only octet mode supported, received request for " + mode + " mode");
+                    logger.log(Level.WARNING, "Only octet or netascii mode supported, received request for " + mode + " mode");
                     throw new RuntimeException();
                 } catch (IOException e) {
                     throw new RuntimeException(e);

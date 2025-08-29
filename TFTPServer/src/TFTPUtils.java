@@ -243,7 +243,8 @@
             }
 
             return buffer.toByteArray();
-        }
+        }//encodes outgoing bytes t netASCII (change /r to either /r/n or /r/0)
+
 
 
     }

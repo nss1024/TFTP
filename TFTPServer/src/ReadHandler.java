@@ -1,3 +1,5 @@
+import encoding.NetAsciiEncoder;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -67,9 +69,10 @@ public class ReadHandler implements Runnable{
         File f = new File(path+fileName);
         try(FileInputStream fis=new FileInputStream(f)) {
             if (mode.equalsIgnoreCase("netascii")) {
+                NetAsciiEncoder ne=new NetAsciiEncoder(fis);
                 byte[] result = null;
                 while (true) {
-                    result = TFTPUtils.checkBytesNetASCII(fis);
+                    result= ne.checkBytesNetASCII();
                     if (sendData(ds, result, blockNo, ip, destPort)) {
                         blockNo = TFTPUtils.incrementBlock(blockNo);
                         counter++;
