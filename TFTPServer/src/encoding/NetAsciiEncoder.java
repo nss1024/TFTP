@@ -47,7 +47,7 @@ public class NetAsciiEncoder {
         }
 
         return buffer.toByteArray();
-    }//encodes outgoing bytes t netASCII (change /r to either /r/n or /r/0)
+    }//encodes outgoing bytes to netASCII (change /r to either /r/n or /r/0)
 
 
 

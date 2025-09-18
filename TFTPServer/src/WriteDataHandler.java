@@ -21,7 +21,7 @@ public class WriteDataHandler implements Runnable{
     DatagramPacket dp = null;
     short blockNo=0;
     boolean running = true;
-    final String PATH = "c:/dev/FileStore/";
+    final String PATH = "c:/dev/TFTP/FileStore/";
     Logger logger = Logger.getGlobal();
     int duplicatePacketCounter;
     List<byte[]> dataBuffer = new ArrayList<byte[]>();
