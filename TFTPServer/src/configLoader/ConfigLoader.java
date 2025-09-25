@@ -1,36 +1,81 @@
 package configLoader;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ConfigLoader {
 
-    String filePath;
-    final String configFileName="appConfig.conf";
+    //String filePath;
+    final static String configFileName="appConfig.conf";
+    static Logger logger = Logger.getLogger(ConfigLoader.class.getName());
+    private static final AppConfigs appConfig=new AppConfigs();
 
-    ConfigLoader(){
-        if(System.getProperty("os.name").contains("Windows")){
-            filePath="c:/dev/TFTP/";
-        }else{
-            filePath="/dev/TFTP/";
-        }
+    public ConfigLoader() throws URISyntaxException {
+
+        Path dir = getConfigDirPath();
+        Properties props = getConfigFromFile(dir);
+        loadConfig(props);
+
     }
 
-    private void getConfigFromFile(String fileName, String path){
+    public static Path getConfigDirPath() throws URISyntaxException {
+        Path jarPath = Paths.get(
+                ConfigLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()
+        );
+        Path jarDir=jarPath.getParent();
+        return jarDir;
+    }
+
+    public static Properties getConfigFromFile(Path p) throws URISyntaxException {
         Properties prop = new Properties();
+        Path configPath = p.resolve(configFileName);
+        File configFile=new File(configPath.toUri());
+        if (Files.exists(configPath)){
+            try (FileInputStream fis = new FileInputStream(configFile)) {
+                prop.load(fis);
 
-        try (FileInputStream fis = new FileInputStream(path+fileName)) {
-            prop.load(fis);
-        } catch (FileNotFoundException ex) {
-            System.out.println("Configuration file"+fileName+"not found at location :"+path+" "+ex);
-        } catch (IOException ex) {
-            System.out.println("An error occurred while reading the configuration file! "+ex);
+            }catch (FileNotFoundException e){
+                logger.log(Level.SEVERE,"Config file not found in "+configPath.toString()+ "Starting server with default values!");
+                logger.log(Level.INFO,"Failed to parse port numbers, the following defaults will be used: " +
+                        "\n Server port:8096 \n Connection port range: 32000 - 33000 \n file store at app directory /FileStore ");
+                loadDefaults();
+
+            }catch (IOException e){
+                logger.log(Level.SEVERE,"IO error while loading config file from "+configPath.toString());
+                logger.log(Level.INFO,"Failed to parse port numbers, the following defaults will be used: " +
+                        "\n Server port:8096 \n Connection port range: 32000 - 33000 \n file store at app directory /FileStore ");
+                loadDefaults();
+            }
         }
+        return prop;
+    }
+
+    private void loadConfig(Properties p){
+        appConfig.setServerPort(Integer.parseInt(p.getProperty("app.serverPort")));
+        appConfig.setPortRangeFrom(Integer.parseInt(p.getProperty("app.serverPortFrom")));
+        appConfig.setPortRangeTo(Integer.parseInt(p.getProperty("app.serverPortTo")));
+        appConfig.setFileStorepath(p.getProperty("app.fileStorePath"));
+    }
+
+    private static void loadDefaults() throws URISyntaxException {
+        appConfig.setServerPort(8069);
+        appConfig.setPortRangeFrom(32000);
+        appConfig.setPortRangeTo(33000);
+        appConfig.setFileStorepath(getConfigDirPath().resolve("FileStore").toString());
 
     }
 
-
-
+    public AppConfigs getAppConfig() {
+        return appConfig;
+    }
 }

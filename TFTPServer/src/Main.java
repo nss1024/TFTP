@@ -1,3 +1,6 @@
+import configLoader.ConfigLoader;
+
+import java.net.URISyntaxException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -8,6 +11,12 @@ public class Main {
         int serverPort=8069;
         int portRangeFrom=32000;
         int portRangeTo = 33000;
+
+        try {
+            ConfigLoader.getConfigFromFile(ConfigLoader.getConfigDirPath());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
 
         //get ports
         try{
