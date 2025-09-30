@@ -1,38 +1,40 @@
 package configLoader;
 
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 
 public class AppConfigs {
 
     private int serverPort = 0;
     private int portRangeFrom = 0;
     private int portRangeTo = 0;
-    private Path fileStorePath;
+    private final Path fileStorePath;
+    private static AppConfigs appConfigs;
 
-    public AppConfigs(){}
 
     public AppConfigs(int serverPort,int portRangeFrom, int portRangeTo, String fileStorePath){
         this.serverPort=serverPort;
         this.portRangeFrom=portRangeFrom;
         this.portRangeTo=portRangeTo;
-        this.fileStorePath= Paths.get(fileStorePath);
+        this.fileStorePath= Paths.get(fileStorePath).resolve("FileStore");
     }
 
-    public void setServerPort(int serverPort) {
-        this.serverPort = serverPort;
+    public static AppConfigs withDefaults() throws URISyntaxException {
+        if(appConfigs==null) {
+            appConfigs = new AppConfigs(8069, 32000, 33000, defaultFileStore().toString());
+        }
+        return appConfigs;
     }
 
-    public void setPortRangeFrom(int portRangeFrom) {
-        this.portRangeFrom = portRangeFrom;
-    }
-
-    public void setPortRangeTo(int portRangeTo) {
-        this.portRangeTo = portRangeTo;
-    }
-
-    public void setFileStorepath(String fileStorePath) {
-        this.fileStorePath= Paths.get(fileStorePath);
+    public static AppConfigs withConfigs(int serverPort,int portRangeFrom,int portRangeTo, String path){
+        if(appConfigs==null) {
+            appConfigs = new AppConfigs(serverPort, portRangeFrom, portRangeTo, path);
+        }
+        return appConfigs;
     }
 
     public int getServerPort() {
@@ -49,5 +51,10 @@ public class AppConfigs {
 
     public Path getFileStorepath() {
         return fileStorePath;
+    }
+
+
+    private static Path defaultFileStore() throws URISyntaxException {
+        return Paths.get(ConfigLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
     }
 }
