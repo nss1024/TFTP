@@ -1,3 +1,5 @@
+import configLoader.ConfigLoader;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -22,7 +24,7 @@ public class WriteDataHandler implements Runnable{
     short blockNo=0;
     boolean running = true;
     final String PATH = "c:/dev/TFTP/FileStore/";
-    Logger logger = Logger.getGlobal();
+    Logger logger = Logger.getLogger(WriteDataHandler.class.getName());
     int duplicatePacketCounter;
     List<byte[]> dataBuffer = new ArrayList<byte[]>();
 

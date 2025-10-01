@@ -1,3 +1,4 @@
+import configLoader.ConfigLoader;
 import encoding.NetAsciiEncoder;
 
 import java.io.File;
@@ -22,7 +23,7 @@ public class ReadHandler implements Runnable{
     DatagramSocket ds = null;
     short blockNo=1;
     final String PATH = "c:/dev/FileStore/";
-    Logger logger = Logger.getGlobal();
+    Logger logger = Logger.getLogger(ReadHandler.class.getName());
     private final int MAX_ATTEMPTS=3;
     private final int TIMEOUT_DURATION=1000;
     private static final int DATA_BLOCK_SIZE = 512;

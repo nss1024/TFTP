@@ -1,3 +1,5 @@
+    import configLoader.ConfigLoader;
+
     import javax.xml.crypto.Data;
     import java.io.ByteArrayOutputStream;
     import java.io.Closeable;
@@ -11,7 +13,7 @@
 
     public final class TFTPUtils {
 
-        private static final Logger logger = Logger.getGlobal();
+        private static final Logger logger = Logger.getLogger(TFTPUtils.class.getName());
 
         private TFTPUtils(){}
 

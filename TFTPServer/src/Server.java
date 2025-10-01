@@ -1,6 +1,8 @@
 /*Assumptions:
  * buffer array - set to 2048 bytes to accommodate larger file names
  */
+import configLoader.ConfigLoader;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -13,7 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Server {
-    private Logger logger = Logger.getGlobal();
+    private Logger logger = Logger.getLogger(Server.class.getName());
     private int port = 0;
     private final int threads = Runtime.getRuntime().availableProcessors()>1?Runtime.getRuntime().availableProcessors()/2:1;
     private DatagramSocket ds = null;
