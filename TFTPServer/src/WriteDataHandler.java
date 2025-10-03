@@ -1,4 +1,5 @@
 import configLoader.ConfigLoader;
+import encoding.NetAsciiDecoder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,6 +28,8 @@ public class WriteDataHandler implements Runnable{
     Logger logger = Logger.getLogger(WriteDataHandler.class.getName());
     int duplicatePacketCounter;
     List<byte[]> dataBuffer = new ArrayList<byte[]>();
+    NetAsciiDecoder netAsciiDecoder = new NetAsciiDecoder();
+
 
     private WriteDataHandler(){}
 
@@ -64,8 +67,8 @@ public class WriteDataHandler implements Runnable{
 
         //check mode; Supported mode = octet, NetAscii
         try {
-            mode = getText(data, 2, 1);//get mode from datagram packet
-            if (!mode.equalsIgnoreCase("mail")) {
+            mode = getText(data, 2, 1).toLowerCase();//get mode from datagram packet
+            if (!mode.equals("octet") && !mode.equals("netascii")) {
                 try {
                     sendError(ds, 0);
                     logger.log(Level.WARNING, "Only octet or netascii mode supported, received request for " + mode + " mode");
@@ -93,11 +96,13 @@ public class WriteDataHandler implements Runnable{
                     ds.receive(dp);
                     buffer = Arrays.copyOf(dp.getData(),dp.getData().length);//get data from datagram packet, copying just in case, no other packet should arrive without us sending an ack
                     if(buffer.length<516){running=false;}//last data packed received
+
                     if(getOpCode(buffer)!=3){//only accept data packets, if anything else, log it and exit loop
                         logger.log(Level.WARNING,"Non data op code received"+getOpCode(buffer));
                         sendError(ds,5);
                         break;
                     }
+
                     //check for duplicate data packets
                     //TODO: make duplicate counter configurable
                     if(getBlockNo(buffer)==blockNo){
@@ -115,12 +120,24 @@ public class WriteDataHandler implements Runnable{
                     logger.log(Level.WARNING,"Error processing data packet!");
                 }
             }
-        for (byte[] bytes : dataBuffer) {
-            try {
-                fos.write(bytes);
-            } catch (IOException e) {
-                logger.log(Level.WARNING, "Error writing to file");
-            }
+        // if octet received, write directly to file, else, need to decode NETASCII
+            for (byte[] bytes : dataBuffer) {
+                if(mode.equals("octet")) {
+                    try {
+                        // if octet received, write directly to file, else, need to decode NETASCII
+                        fos.write(bytes);
+                    } catch (IOException e) {
+                        logger.log(Level.WARNING, "Error writing to file");
+                    }
+                }
+                if(mode.equals("netascii")) {
+                    try {
+                        byte[] decodedBytes = netAsciiDecoder.decodeNetAscii(bytes);
+                        fos.write(decodedBytes);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
         }
         try {
             fos.close();
