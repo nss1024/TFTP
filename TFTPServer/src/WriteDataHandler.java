@@ -1,5 +1,6 @@
 import configLoader.ConfigLoader;
 import encoding.NetAsciiDecoder;
+import watchdog.WatchDogMonitoredSession;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class WriteDataHandler implements Runnable{
+public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
     List<Integer> portList;
     byte[] data = null;
     String ip = "";
@@ -23,12 +24,13 @@ public class WriteDataHandler implements Runnable{
     DatagramSocket ds = null;
     DatagramPacket dp = null;
     short blockNo=0;
-    boolean running = true;
+    private volatile boolean running = true;
     final String PATH = "c:/dev/TFTP/FileStore/";
     Logger logger = Logger.getLogger(WriteDataHandler.class.getName());
     int duplicatePacketCounter;
     List<byte[]> dataBuffer = new ArrayList<byte[]>();
     NetAsciiDecoder netAsciiDecoder = new NetAsciiDecoder();
+    private Thread sessionThread;
 
 
     private WriteDataHandler(){}
@@ -43,6 +45,7 @@ public class WriteDataHandler implements Runnable{
 
     @Override
     public void run() {
+        sessionThread=Thread.currentThread();
         createDatagramSocket();
         String fileName="";
         String mode="";
@@ -277,6 +280,14 @@ public class WriteDataHandler implements Runnable{
                 logger.log(Level.WARNING,"Error initializing datagram socket!");
                 throw new RuntimeException();
             }
+        }
+
+        public boolean isAlive(){
+        return running;
+        }
+
+        public void stopSession(){
+            sessionThread.interrupt();
         }
 
 

@@ -4,21 +4,25 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DataStore {
-    private ConcurrentHashMap<Runnable, Long> threadDataStore = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<WatchDogMonitoredSession, Long> threadDataStore = new ConcurrentHashMap<>();
 
+    private DataStore(){}
 
-    public void addSessionToDataStore(Runnable r, Long systemTime){
-        threadDataStore.put(r,systemTime);
+    public static void addSessionToDataStore(WatchDogMonitoredSession r){
+        threadDataStore.put(r,System.currentTimeMillis());
     }
 
-    public Long getStartTime(Runnable r){
+    public static Long getStartTime(WatchDogMonitoredSession r){
         return threadDataStore.get(r);
     }
 
-    public Set<Runnable> getSessionsInDataStore(){
+    public static Set<WatchDogMonitoredSession> getSessionsInDataStore(){
         return threadDataStore.keySet();
     }
-    
+
+    public static void removeSession(WatchDogMonitoredSession r){
+        threadDataStore.remove(r);
+    }
 
 
 }
