@@ -1,5 +1,7 @@
 import configLoader.ConfigLoader;
 import encoding.NetAsciiEncoder;
+import watchdog.DataStore;
+import watchdog.WatchDogMonitoredSession;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,7 +15,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ReadHandler implements Runnable{
+public class ReadHandler implements Runnable, WatchDogMonitoredSession {
 
     List<Integer> portList;
     byte[] data = null;
@@ -27,6 +29,8 @@ public class ReadHandler implements Runnable{
     private final int MAX_ATTEMPTS=3;
     private final int TIMEOUT_DURATION=1000;
     private static final int DATA_BLOCK_SIZE = 512;
+    private volatile boolean running = true;
+    private Thread sessionThread;
 
 
 
@@ -42,6 +46,8 @@ public class ReadHandler implements Runnable{
 
     @Override
     public void run() {
+        sessionThread=Thread.currentThread();
+        DataStore.addSessionToDataStore(this);
         //get file name
         ds=TFTPUtils.getDatagramSocket(localPort,TIMEOUT_DURATION);
         String fileName = TFTPUtils.getText(data,2,0);
@@ -86,6 +92,7 @@ public class ReadHandler implements Runnable{
                         break;
                     }
                 }
+                running=false;
                 logger.log(Level.INFO, "File transmitted successfully." + counter + "blocks were sent to " + ip + ":" + destPort);
 
             }
@@ -100,6 +107,7 @@ public class ReadHandler implements Runnable{
                     return;
                 }
             }
+            running = false;
             logger.log(Level.INFO, "File transmitted successfully." + counter + "blocks were sent to " + ip + ":" + destPort);
         }
 
@@ -158,5 +166,15 @@ public class ReadHandler implements Runnable{
         }
     }
 
+
+    @Override
+    public boolean isAlive() {
+        return running;
+    }
+
+    @Override
+    public void stopSession() {
+        sessionThread.interrupt();
+    }
 }
 

@@ -1,5 +1,6 @@
 import configLoader.ConfigLoader;
 import encoding.NetAsciiDecoder;
+import watchdog.DataStore;
 import watchdog.WatchDogMonitoredSession;
 
 import java.io.File;
@@ -46,6 +47,7 @@ public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
     @Override
     public void run() {
         sessionThread=Thread.currentThread();
+        DataStore.addSessionToDataStore(this);
         createDatagramSocket();
         String fileName="";
         String mode="";
