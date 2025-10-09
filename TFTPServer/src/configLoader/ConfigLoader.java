@@ -33,14 +33,14 @@ public class ConfigLoader {
 
     }
 
-    public static Path getConfigDirPath() throws URISyntaxException {
+    private  Path getConfigDirPath() throws URISyntaxException {
         Path jarPath = Paths.get(
                 ConfigLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()
         );
         return jarPath.getParent();
     }
 
-    public static Properties getConfigFromFile(Path p) throws URISyntaxException {
+    private  Properties getConfigFromFile(Path p) throws URISyntaxException {
         Properties prop = new Properties();
         Path configPath = p.resolve(configFileName);
         File configFile=new File(configPath.toUri());

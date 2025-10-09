@@ -1,10 +1,6 @@
-    import configLoader.ConfigLoader;
 
-    import javax.xml.crypto.Data;
-    import java.io.ByteArrayOutputStream;
     import java.io.Closeable;
     import java.io.IOException;
-    import java.io.InputStream;
     import java.net.*;
     import java.nio.ByteBuffer;
     import java.nio.charset.StandardCharsets;
@@ -181,14 +177,6 @@
             return (short)((blockNo + 1) & 0xFFFF);
         }
 
-        public static byte[] createDataPacket(short blockNumber,byte[] data){
-            ByteBuffer bb = ByteBuffer.allocate(data.length+4);
-            bb.putShort((short)3);
-            bb.putShort(blockNumber);
-            bb.put(data);
-            return bb.array();
-        }
-
         public static boolean isError(byte[] b){
             return getShort(b,0)==(short)5;
         }
@@ -203,49 +191,11 @@
             return true;
         }
 
-        public static boolean isCarriageReturn(byte b) {
-            return b == '\r';
-        }
 
-        public static boolean isLineFeed(byte b) {
-            return b == '\n';
-        }
 
-        public static byte[] checkBytesNetASCII(InputStream s) throws IOException {
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream(512);
 
-            boolean crDetected = false;
-            int byteIn;
 
-            while (buffer.size() < 512 && (byteIn = s.read()) != -1) {
-                if (isCarriageReturn((byte)byteIn)) {
-                    crDetected = true;
-                    continue;
-                }
 
-                if (crDetected) {
-                    if (isLineFeed((byte)byteIn)) {
-                        buffer.write('\r');
-                        buffer.write('\n');
-                    } else {
-                        buffer.write('\r');
-                        buffer.write('\0');
-                        buffer.write(byteIn);
-                    }
-                    crDetected = false;
-                } else {
-                    buffer.write(byteIn);
-                }
-            }
-
-            // Handle case where stream ends after a \r
-            if (crDetected) {
-                buffer.write('\r');
-                buffer.write('\0');
-            }
-
-            return buffer.toByteArray();
-        }//encodes outgoing bytes t netASCII (change /r to either /r/n or /r/0)
 
 
 
