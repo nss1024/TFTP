@@ -17,7 +17,6 @@ public class ConfigLoader {
     //String filePath;
     final static String configFileName="appConfig.conf";
     static Logger logger = Logger.getLogger(ConfigLoader.class.getName());
-    private static AppConfigs appConfig;
     private final Properties configProps;
 
     private int serverPort = 0;
@@ -114,7 +113,7 @@ public class ConfigLoader {
         }
     }
 
-    public AppConfigs getAppConfig() {
-        return loadConfig(configProps);
+    public void loadAppConfig() {
+        loadConfig(configProps);
     }
 }

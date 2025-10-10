@@ -16,7 +16,8 @@ public class Main {
         AppConfigs appConfigs;
         try {
             ConfigLoader configloader = new ConfigLoader();
-            appConfigs = configloader.getAppConfig();//this will either load config from a config file or load default config;
+            configloader.loadAppConfig();//this will either load config from a config file or load default config;
+            appConfigs = AppConfigs.getAppConfigs();
 
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);

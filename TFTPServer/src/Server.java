@@ -1,6 +1,7 @@
 /*Assumptions:
  * buffer array - set to 2048 bytes to accommodate larger file names
  */
+import configLoader.AppConfigs;
 import configLoader.ConfigLoader;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Server {
+    AppConfigs appConfigs = AppConfigs.getAppConfigs();
     private Logger logger = Logger.getLogger(Server.class.getName());
     private int port = 0;
     private final int threads = Runtime.getRuntime().availableProcessors()>1?Runtime.getRuntime().availableProcessors()/2:1;
@@ -23,8 +25,8 @@ public class Server {
     private ThreadPoolExecutor threadPoolExecutor = null;
     BlockingQueue<Runnable> workQueue=new LinkedBlockingQueue();
     private boolean running = true;
-    private int portRangeFrom=0;
-    private int portRangeTo = 0;
+    private int portRangeFrom= appConfigs.getPortRangeFrom();
+    private int portRangeTo = appConfigs.getPortRangeTo();
     private List<Integer> portList = new CopyOnWriteArrayList<>();
     int sessionPort=0;
 

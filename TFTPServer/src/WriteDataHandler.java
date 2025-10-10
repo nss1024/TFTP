@@ -1,3 +1,4 @@
+import configLoader.AppConfigs;
 import configLoader.ConfigLoader;
 import encoding.NetAsciiDecoder;
 import watchdog.DataStore;
@@ -15,17 +16,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
+    AppConfigs appConfigs = AppConfigs.getAppConfigs();
     List<Integer> portList;
     byte[] data = null;
     String ip = "";
     int destPort = 0;
-    int localPort = 8888;
+    int localPort = TFTPUtils.getLocalPort(appConfigs.getPortRangeFrom(),appConfigs.getPortRangeTo(),portList);
     private final int SOCKET_CREATE_TIMEOUT=60;
     DatagramSocket ds = null;
     DatagramPacket dp = null;
     short blockNo=0;
     private volatile boolean running = true;
-    final String PATH = "c:/dev/TFTP/FileStore/";
+    final String PATH = appConfigs.getFileStorepath().toString();
     Logger logger = Logger.getLogger(WriteDataHandler.class.getName());
     int duplicatePacketCounter;
     List<byte[]> dataBuffer = new ArrayList<byte[]>();

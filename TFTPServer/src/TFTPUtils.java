@@ -4,6 +4,8 @@
     import java.net.*;
     import java.nio.ByteBuffer;
     import java.nio.charset.StandardCharsets;
+    import java.util.List;
+    import java.util.Random;
     import java.util.logging.Level;
     import java.util.logging.Logger;
 
@@ -189,6 +191,15 @@
             if (fn == null || fn.isEmpty()) return false;
             if (fn.contains("..") || fn.contains("/") || fn.contains("\\")) return false;
             return true;
+        }
+
+        public static int getLocalPort(int rangeFrom, int rangeTo, List<Integer> portList){
+            Random rand = new Random();
+            int port = rand.nextInt(rangeTo-rangeFrom)+rangeFrom;
+            while(portList.contains(port)){
+                port = rand.nextInt(rangeTo-rangeFrom)+rangeFrom;
+            }
+            return port;
         }
 
 

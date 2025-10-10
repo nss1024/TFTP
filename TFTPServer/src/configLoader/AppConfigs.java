@@ -56,4 +56,8 @@ public class AppConfigs {
     private static Path defaultFileStore() throws URISyntaxException {
         return Paths.get(ConfigLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
     }
+
+    public static AppConfigs getAppConfigs(){
+        return appConfigs;
+    }
 }
