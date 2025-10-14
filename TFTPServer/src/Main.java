@@ -2,10 +2,8 @@ import configLoader.AppConfigs;
 import configLoader.ConfigLoader;
 import configLoader.LoggerConfig;
 import watchdog.WatchDogMain;
-import watchdog.WatchDogMonitoredSession;
 
 import java.net.URISyntaxException;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,6 +23,7 @@ public class Main {
 
         WatchDogMain watchDogMain = new WatchDogMain();
         watchDogMain.start();
+        logger.log(Level.INFO,"Watchdog started!");
 
         //Configure logging
         LoggerConfig.setup();

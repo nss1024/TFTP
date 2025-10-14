@@ -1,5 +1,4 @@
 import configLoader.AppConfigs;
-import configLoader.ConfigLoader;
 import encoding.NetAsciiDecoder;
 import watchdog.DataStore;
 import watchdog.WatchDogMonitoredSession;
@@ -21,7 +20,7 @@ public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
     byte[] data = null;
     String ip = "";
     int destPort = 0;
-    int localPort = TFTPUtils.getLocalPort(appConfigs.getPortRangeFrom(),appConfigs.getPortRangeTo(),portList);
+    int localPort = 0;
     private final int SOCKET_CREATE_TIMEOUT=60;
     DatagramSocket ds = null;
     DatagramPacket dp = null;
@@ -47,6 +46,7 @@ public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
 
     @Override
     public void run() {
+
         sessionThread=Thread.currentThread();
         DataStore.addSessionToDataStore(this);
         ds=TFTPUtils.getDatagramSocket(localPort,SOCKET_CREATE_TIMEOUT);
@@ -57,7 +57,8 @@ public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
             //get filename from datagram packet
             fileName = TFTPUtils.getText(data, 2, 0);
             //try to create file
-            fos = new FileOutputStream(new File(PATH + "/" + fileName));
+            fos = new FileOutputStream(new File(fileName));
+            //fos = new FileOutputStream(new File(PATH + "/" + fileName));
         } catch (FileNotFoundException e) {
             logger.log(Level.WARNING, "Error creating file! ");
                TFTPUtils.sendError(ds,2,TFTPUtils.getError(2),ip,destPort);
@@ -87,55 +88,57 @@ public class WriteDataHandler implements Runnable, WatchDogMonitoredSession {
 
 
 
-            while(running){//if all is well, start listening for inbound packets.
-                byte [] buffer = new byte [516]; //Packets should be 516 bytes 2byte OP Code + 2bye Block number + 512 bytes data
+            while(running) {//if all is well, start listening for inbound packets.
+                byte[] buffer = new byte[516]; //Packets should be 516 bytes 2byte OP Code + 2bye Block number + 512 bytes data
+                dp=new DatagramPacket(buffer,buffer.length);
                 try {
                     ds.receive(dp);
-                    buffer = Arrays.copyOf(dp.getData(),dp.getData().length);//get data from datagram packet, copying just in case, no other packet should arrive without us sending an ack
-                    if(buffer.length<516){running=false;}//last data packed received
-
-                    if(TFTPUtils.getOpCode(buffer)!=3){//only accept data packets, if anything else, log it and exit loop
-                        logger.log(Level.WARNING,"Non data op code received"+TFTPUtils.getOpCode(buffer));
-                        TFTPUtils.sendError(ds,5,TFTPUtils.getError(5),ip,destPort);
+                    buffer = Arrays.copyOf(dp.getData(), dp.getLength());//get data from datagram packet, copying just in case, no other packet should arrive without us sending an ack
+                    if (buffer.length < 516) {
+                        running = false;
+                    }//last data packed received
+                    if (TFTPUtils.getOpCode(buffer) != 3) {//only accept data packets, if anything else, log it and exit loop
+                        logger.log(Level.WARNING, "Non data op code received" + TFTPUtils.getOpCode(buffer));
+                        TFTPUtils.sendError(ds, 5, TFTPUtils.getError(5), ip, destPort);
                         break;
                     }
-
                     //check for duplicate data packets
                     //TODO: make duplicate counter configurable
-                    if(TFTPUtils.getBlockNo(buffer)==blockNo){
-                        logger.log(Level.WARNING,"Duplicate packet detected");
-                        if(duplicatePacketCounter==3){
-                            TFTPUtils.sendError(ds,4,TFTPUtils.getError(4),ip,destPort);
+                    if (TFTPUtils.getBlockNo(buffer) == blockNo) {
+                        logger.log(Level.WARNING, "Duplicate packet detected");
+                        if (duplicatePacketCounter == 3) {
+                            TFTPUtils.sendError(ds, 4, TFTPUtils.getError(4), ip, destPort);
                             break;
                         }
                         duplicatePacketCounter++;
                     }
-                    blockNo=TFTPUtils.getBlockNo(buffer);//update block number
-                    dataBuffer.add(Arrays.copyOfRange(buffer,4,buffer.length));//save data to Arraylist
-                    TFTPUtils.sendACK(ds,TFTPUtils.getBlockNo(buffer),ip,blockNo);
+                    blockNo = TFTPUtils.getBlockNo(buffer);//update block number
+                    dataBuffer.add(Arrays.copyOfRange(buffer, 4, buffer.length));//save data to Arraylist
+                    TFTPUtils.sendACK(ds, TFTPUtils.getBlockNo(buffer), ip, destPort);
                 } catch (IOException ex) {
-                    logger.log(Level.WARNING,"Error processing data packet!");
+                    logger.log(Level.WARNING, "Error processing data packet!");
                 }
             }
-        // if octet received, write directly to file, else, need to decode NETASCII
-            for (byte[] bytes : dataBuffer) {
-                if(mode.equals("octet")) {
-                    try {
-                        // if octet received, write directly to file, else, need to decode NETASCII
-                        fos.write(bytes);
-                    } catch (IOException e) {
-                        logger.log(Level.WARNING, "Error writing to file");
+                // if octet received, write directly to file, else, need to decode NETASCII
+                for (byte[] bytes : dataBuffer) {
+                    if (mode.equals("octet")) {
+                        try {
+                            // if octet received, write directly to file, else, need to decode NETASCII
+                            fos.write(bytes);
+                        } catch (IOException e) {
+                            logger.log(Level.WARNING, "Error writing to file");
+                        }
+                    }
+                    if (mode.equals("netascii")) {
+                        try {
+                            byte[] decodedBytes = netAsciiDecoder.decodeNetAscii(bytes);
+                            fos.write(decodedBytes);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                 }
-                if(mode.equals("netascii")) {
-                    try {
-                        byte[] decodedBytes = netAsciiDecoder.decodeNetAscii(bytes);
-                        fos.write(decodedBytes);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-        }
+
         try {
             fos.close();
         } catch (IOException e) {

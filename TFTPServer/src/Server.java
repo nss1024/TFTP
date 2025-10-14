@@ -27,7 +27,7 @@ public class Server {
     private boolean running = true;
     private int portRangeFrom= appConfigs.getPortRangeFrom();
     private int portRangeTo = appConfigs.getPortRangeTo();
-    private List<Integer> portList = new CopyOnWriteArrayList<>();
+    private final List<Integer> portList = new CopyOnWriteArrayList<>();
     int sessionPort=0;
 
     Server(int port, int portRangeFrom, int portRangeTo){
@@ -49,7 +49,7 @@ public class Server {
 
     private void startExecutorPool(int threads){
         threadPoolExecutor=new ThreadPoolExecutor(2,threads,60L, TimeUnit.SECONDS,workQueue);
-        logger.log(Level.INFO,"Thread pool executor started!");
+        logger.log(Level.INFO,"Thread pool executor started! Using "+threads+" threads!");
     }
 
     private void stopExecutorService(){executor.shutdown();}
@@ -57,13 +57,8 @@ public class Server {
     public void stopServer(){running=false; ds.close();stopExecutorService();}
 
     private int getthreadPortNumber(){
-        int threadPort=0;
-        while(threadPort==0) {
-            threadPort = (int) (Math.random() * 100)+portRangeFrom;
-            if(portList.indexOf(threadPort)==-1){threadPort=0;}
-        }
-        portList.add(portRangeFrom+threadPort);
-        return threadPort;
+
+       return TFTPUtils.getLocalPort(portRangeFrom,portRangeTo,portList);
     }
 
     public void startServer(){
@@ -80,6 +75,7 @@ public class Server {
                 byte[] data = Arrays.copyOf(dp.getData(),dp.getData().length);
                 dpPort=dp.getPort();
                 dpIpAddress=dp.getAddress().getHostAddress();
+
                 switch(getOpCode(data)) {
                     case 1://read request RRQ
 

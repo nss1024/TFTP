@@ -199,6 +199,7 @@
             while(portList.contains(port)){
                 port = rand.nextInt(rangeTo-rangeFrom)+rangeFrom;
             }
+            portList.add(port);
             return port;
         }
 
